@@ -16,8 +16,12 @@ package pkg
 
 import (
 	"runtime"
+	"runtime/debug"
 	"strings"
+	"time"
 )
+
+const unknown = "unknown"
 
 // Base version information.
 //
@@ -26,14 +30,66 @@ import (
 var (
 	// Output of "git describe". The prerequisite is that the branch should be
 	// tagged using the correct versioning strategy.
-	gitVersion = "unknown"
+	gitVersion = unknown
 	// SHA1 from git, output of $(git rev-parse HEAD).
-	gitCommit = "unknown"
+	gitCommit = unknown
 	// State of git tree, either "clean" or "dirty".
-	gitTreeState = "unknown"
+	gitTreeState = unknown
 	// Build date in ISO8601 format.
-	buildDate = "unknown"
+	buildDate = unknown
 )
+
+// nolint:gochecknoinits
+func init() {
+	buildInfo := getBuildInfo()
+	gitCommit = getCommit(buildInfo)
+	gitTreeState = getDirty(buildInfo)
+	buildDate = getBuildDate(buildInfo)
+}
+
+func getBuildInfo() *debug.BuildInfo {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil
+	}
+	return bi
+}
+
+func getCommit(bi *debug.BuildInfo) string {
+	return getKey(bi, "vcs.revision")
+}
+
+func getDirty(bi *debug.BuildInfo) string {
+	modified := getKey(bi, "vcs.modified")
+	if modified == "true" {
+		return "dirty"
+	}
+	if modified == "false" {
+		return "clean"
+	}
+	return unknown
+}
+
+func getBuildDate(bi *debug.BuildInfo) string {
+	buildTime := getKey(bi, "vcs.time")
+	t, err := time.Parse("2006-01-02T15:04:05Z", buildTime)
+	if err != nil {
+		return unknown
+	}
+	return t.Format("2006-01-02T15:04:05")
+}
+
+func getKey(bi *debug.BuildInfo, key string) string {
+	if bi == nil {
+		return unknown
+	}
+	for _, iter := range bi.Settings {
+		if iter.Key == key {
+			return iter.Value
+		}
+	}
+	return unknown
+}
 
 // GetTagVersion returns the scorecard version
 // fr the release GitHub tag, i.e. v.X.Y.Z.

@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/release-utils/version"
 
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/clients"
@@ -67,7 +66,7 @@ func New(o *options.Options) *cobra.Command {
 
 	// Add sub-commands.
 	cmd.AddCommand(serveCmd(o))
-	cmd.AddCommand(version.Version())
+	cmd.AddCommand(versionCmd)
 	return cmd
 }
 
@@ -160,4 +159,20 @@ func rootCmd(o *options.Options) {
 	if resultsErr != nil {
 		log.Panicf("Failed to format results: %v", resultsErr)
 	}
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print version information",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		// not using logger, since it prints timing info, etc
+		fmt.Printf("GitVersion:\t%s\n", pkg.GetTagVersion())
+		fmt.Printf("GitCommit:\t%s\n", pkg.GetCommit())
+		fmt.Printf("GitTreeState:\t%s\n", pkg.GetTreeState())
+		fmt.Printf("BuildDate:\t%s\n", pkg.GetBuildDate())
+		fmt.Printf("GoVersion:\t%s\n", pkg.GetGoVersion())
+		fmt.Printf("Compiler:\t%s\n", pkg.GetCompiler())
+		fmt.Printf("Platform:\t%s/%s\n", pkg.GetOS(), pkg.GetArch())
+	},
 }
